@@ -197,7 +197,7 @@ def main(img):
                return csv
            ctrs = process_small(file, cellX,cellY)
            best= get_best_ctr(ctrs)
-           print(get_data(best))
+           print(get_data(best))               
            cellData = get_data(best)
            last = best
            time = int(file[-19:-6])
@@ -212,9 +212,7 @@ def main(img):
     return csv
 
  
-    
-
-main("2019-03-01_20;01_1551499548124ms.jpg")
+main("2019-03-01_20;01_1551499548124ms.jpg")    
         
 def profile():
     cProfile.run('main("2019-03-01_20;01_1551499548124ms.jpg")')
