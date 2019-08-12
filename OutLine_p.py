@@ -2,11 +2,8 @@ import cv2
 import glob
 import csv
 import numpy as np
-#import cProfile
 import math
-#import imageio
 import pickle
-#import os
 import OutLine as op
 
 
