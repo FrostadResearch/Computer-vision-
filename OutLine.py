@@ -251,6 +251,72 @@ returns contour of selected cell.
 
     return ellipse
 
+def pick_multi_cells(i):
+    """
+takes in an image name, processes it, nubers every contour,
+displays the image with numbers, asks for user input of cell selection
+returns contour of selected cell. 
+    """
+    ctrs = process(i)
+    img = cv2.imread(i)
+
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1000, 750)
+
+    #iterate over list of contours to only draw and count valid contours 
+    i=0
+    #cellCount = 0
+    while (i< len(ctrs)):
+        if (good_cont(ctrs[i])):
+            #print(i)
+
+            #draw and count valid contours
+            cv2.drawContours(img, ctrs, i, (0,255,0),2)  
+            #cellCount= cellCount + 1        
+
+            # label contour on image 
+            extRight = tuple(ctrs[i][ctrs[i][:, :, 0].argmax()][0])
+            cv2.circle(img, extRight, 8, (255, 0, 0), -1)
+            cv2.putText(img,str(i), extRight,
+                        cv2.FONT_HERSHEY_TRIPLEX, 2, 255,4)
+        
+        i= i + 1
+        
+    print("choose a cell to track:")
+    
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1000, 750)
+    cv2.imshow("img", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    cells = []
+    cell = ""
+    while True:
+        cell_str = input()
+        if cell_str == "n":
+            break
+        cell = int(cell_str)
+        ellipse = cv2.fitEllipse(ctrs[cell])
+        cells.append(ellipse)
+    print("thanks!")
+
+    #just me testing to make sure the correct contour is being picked 
+    cv2.drawContours(img, ctrs, cell, (0,0,255),2)
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1000, 750)
+    #test get centre functions 
+    x,y = get_centre_val(ctrs[cell])
+    
+    cv2.putText(img,"the point", (x,y),
+                        cv2.FONT_HERSHEY_TRIPLEX, 2, (0,0,255),4)
+    cv2.imshow("img", img)
+    #end testing 
+
+    #print(x, y)
+    
+
+    return cells
+
 def get_size_data(c):
     """
 Take in a cell contour and returns area of the contour
@@ -273,7 +339,7 @@ returns list of lists of contours of that cell and times of that cell
     #files.pop(len(files)-1)
     img = files[0]
     init = pick_cells(img)
-#    initTime = int(img[-19:-6])
+    #initTime = int(img[-19:-6])
     #files = glob.glob('2019-03-01_20;0*.jpg')
     nfiles = len(files)
 
@@ -321,21 +387,88 @@ returns list of lists of contours of that cell and times of that cell
         
     return contours
 
+def multi_main(directory):
+    """
+takes in an image name, runs pick_cells, finds contour of picked_cell
+for every image that follows reg ex rules based on the first image
+returns list of lists of contours of that cell and times of that cell
+    """
+    files = glob.glob(directory+"*")
+    files.sort()
+    #files.pop(len(files)-1)
+    img = files[0]
+    init = pick_multi_cells(img)
+    #initTime = int(img[-19:-6])
+    #files = glob.glob('2019-03-01_20;0*.jpg')
+    nfiles = len(files)
+
+    last = init
+    #(cellX,cellY),(MA,ma), angle = last
+    #cellX, cellY = get_centre_val(last)
+    i = 0
+    contours = []
+    times= []
+
+    for file in files:
+        
+        #print(cellX, cellY)
+        i= i+1
+        #if image_light(file)< 90:
+        #    return contours
+        c=[]
+        #print(file[-19:-6])
+        time = int(file[-19:-6])
+        times.append(time)
+        if i ==nfiles :
+            return contours
+
+        new_last = []
+        for cell in last:
+            (cellX,cellY),(MA,ma), angle = cell
+            ctrs, im = process_small(file, cellX,cellY) 
+        #cv2.destroyWindow('img')
+            if ctrs== []:
+                print(i)
+                continue
+                #print(i)
+                #return contours            
+            else:
+            
+                #(cellX,cellY),(MA,ma), angle = last
+                #cellX, cellY = get_centre_val(last)
+                best= best_to_cor_e(ctrs, cellX,cellY)
+                print(get_size_data_e(best))
+                #row = [time, best]
+                c.append([best])
+                #print(get_size_data_e(best))
+                new_last.append(best)
+                #last = best
+                #contours.append(c)
+        last = new_last
+        contours.append(c)
+                
+        #cv2.drawContours(im, best, 0, (0,0,255),2) 
+        #cv2.imshow("img", im)
+        
+        
+    return contours, times
+
 
 def times(directory):
     files = glob.glob(directory+"*")
     files.sort()
     #files.pop(len(files)-1)
     #print(files)
+    print(files[0][-19:-6])
     init = int(files[0][-19:-6])
     t= []
     for file in files:
         time = int(file[-19:-6])-init
         t.append(time)
-        print(time)
+        #print(time)
     return t
 
-def pickle_the_thing(time, ctrs):
+def pickle_the_thing(ctrs, time):
     pickle_out= open("list.pickle","wb")
     pickle.dump(ctrs, pickle_out)
     pickle_out.close()
@@ -349,6 +482,25 @@ def globifier(img):
     pickle_the_thing(main(img))
 
 
+def run_multi():
+    print("the directory:")
+    d= input()
+    #times(d+"*")
+    while True:
+        print("do you want to get data? y or n")
+        i = input()
+        if i == "y":
+            c = multi_main(d+"*")
+            t= times(d+ "*")
+            pickle_the_thing(c,t )
+            #print(multi_main(d+"*"))
+        if i == "n":
+            quit()
+
+#run_multi()
+
+#dir: C:\Users\eagub\Desktop\OutLine\data\modified glass BB 85C 0522\
+
 def run():
     print("the directory:")
     d= input()
@@ -357,11 +509,11 @@ def run():
         print("do you want to get data? y or n")
         i = input()
         if i == "y":
-            main(d+"*")
+            multi_main(d+"*")
         if i == "n":
             quit()
 
-run()
+
 
 #tlist = times("../modified glass BB 90C 0523 2/")
 #pickle_the_thing(tlist,clist)
